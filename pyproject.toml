@@ -1,0 +1,51 @@
+[project]
+name = "doc-search"
+version = "0.1.0"
+description = "Практика 2.2.2–2.2.3: индексация документов через Kafka в pgvector и замеры HNSW"
+readme = "README.md"
+authors = [
+    { name = "Tozhybayev Aibat", email = "a.tozhybayev@alantech.kz" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "confluent-kafka>=2.6",
+    "fastapi>=0.115",
+    "numpy>=2.1",
+    "pgvector>=0.3",
+    "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "pydantic-settings>=2.6",
+    "pypdf>=5.1",
+    "python-docx>=1.1",
+    "python-multipart>=0.0.12",
+    "sentence-transformers>=3.3",
+    "torch>=2.5",
+    "uvicorn[standard]>=0.32",
+]
+
+[project.scripts]
+# uv run doc-api     — HTTP API на :8000 (Swagger: /docs)
+# uv run doc-worker  — воркер-индексатор, читает Kafka
+# uv run doc-bench   — замеры pgvector: без индекса и с HNSW
+doc-api = "doc_search:main"
+doc-worker = "doc_search.worker:main"
+doc-bench = "doc_search.bench:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
