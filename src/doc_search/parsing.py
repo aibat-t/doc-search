@@ -2,7 +2,7 @@
 
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 
@@ -36,10 +36,29 @@ def parse_file(path: Path, source: str) -> ParsedDocument:
     if parser is None:
         raise UnsupportedFormat(f"Формат {suffix or '(без расширения)'} не поддерживается")
     doc = parser(path)
-    blocks = [b for b in doc.blocks if b.text.strip()]
+    blocks = [replace(b, text=clean_text(b.text)) for b in doc.blocks]
+    blocks = [b for b in blocks if b.text]
     if not blocks:
         raise EmptyDocument("В документе не найден текст")
     return ParsedDocument(title=doc.title or Path(source).stem, blocks=blocks)
+
+
+# «Сноска. Статья 1 с изменениями, внесенными Законом РК от ...» (на казахском — «Ескерту.»).
+# Удаляем до следующего пункта статьи («2. Текст...») или до конца блока.
+_FOOTNOTE = re.compile(
+    r"(Сноска|Ескерту)\..*?(?=\s\d+(?:-\d+)?\.\s+[А-ЯЁӘІҢҒҮҰҚӨҺA-Z]|$)", re.DOTALL
+)
+_SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?)])")
+_SPACE_AFTER_PAREN = re.compile(r"\(\s+")
+_MANY_SPACES = re.compile(r"\s{2,}")
+
+
+def clean_text(text: str) -> str:
+    """Чистка, общая для всех форматов: сноски об изменениях и артефакты вроде «слово , слово»."""
+    text = _FOOTNOTE.sub("", text)
+    text = _SPACE_BEFORE_PUNCT.sub(r"\1", text)
+    text = _SPACE_AFTER_PAREN.sub("(", text)
+    return _MANY_SPACES.sub(" ", text).strip()
 
 
 def _section(stack: list[str]) -> str:
@@ -178,6 +197,11 @@ def pdf_lines_to_blocks(pages: list[list[str]]) -> list[Block]:
     """Строки PDF по страницам → блоки. Главы и статьи (законы РК) становятся разделами."""
     boilerplate = find_boilerplate(pages)
     chapter = article = ""
+    # Длинное название главы/статьи в PDF переносится на следующую строку:
+    #   «Статья 16-1. Уведомление о ... по оказанию услуг»
+    #   «связи»
+    # Строка со строчной буквы сразу после заголовка — его продолжение, а не текст.
+    open_heading: str | None = None      # "chapter" | "article" | None
     blocks: list[Block] = []
 
     for page_no, lines in enumerate(pages, start=1):
@@ -195,14 +219,21 @@ def pdf_lines_to_blocks(pages: list[list[str]]) -> list[Block]:
                 continue
             if _CHAPTER.match(line):
                 flush()
-                chapter, article = line, ""
+                chapter, article, open_heading = line, "", "chapter"
             elif _ARTICLE.match(line):
                 flush()
-                article = line
-            elif buffer and buffer[-1].endswith("-"):
-                buffer[-1] = buffer[-1][:-1] + line     # перенос слова: «пере-» + «вод»
+                article, open_heading = line, "article"
+            elif open_heading and not buffer and line[0].islower():
+                if open_heading == "chapter":
+                    chapter = f"{chapter} {line}"
+                else:
+                    article = f"{article} {line}"
             else:
-                buffer.append(line)
+                open_heading = None
+                if buffer and buffer[-1].endswith("-"):
+                    buffer[-1] = buffer[-1][:-1] + line     # перенос слова: «пере-» + «вод»
+                else:
+                    buffer.append(line)
         flush()
     return blocks
 

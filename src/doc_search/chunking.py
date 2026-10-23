@@ -10,8 +10,14 @@ from doc_search.parsing import Block
 
 TokenCounter = Callable[[str], int]
 
-# Режем по концу предложения: точка, !, ?, … и т. п., за которыми идёт пробел.
-_SENTENCE_END = re.compile(r"(?<=[.!?…;])\s+")
+# Режем по концу предложения (точка, !, ?, …, ;) и после двоеточия перед нумерованным пунктом:
+# «используются следующие понятия: 1) ...» → «...понятия:» | «1) ...».
+_SENTENCE_END = re.compile(r"(?<=[.!?…;])\s+|(?<=:)\s+(?=\d+(?:-\d+)?\)\s)")
+
+# Статья-словарь: «Основные понятия», «Термины», «Негізгі ұғымдар».
+_GLOSSARY = re.compile(r"понятия|термин|ұғым", re.IGNORECASE)
+# Начало пункта словаря: «17) », «22-2) ».
+_ITEM_START = re.compile(r"^\d+(?:-\d+)?\)\s")
 
 
 def approx_tokens(text: str) -> int:
@@ -57,18 +63,35 @@ def chunk_blocks(
     for section, section_blocks in groupby(blocks, key=lambda b: b.section):
         header = " > ".join(part for part in (title, section) if part)
         sentences = list(_sentences(section_blocks, max_tokens, count_tokens))
-        for window in _windows(sentences, max_tokens, overlap_tokens):
-            chunks.append(
-                Chunk(
-                    index=len(chunks),
-                    text=" ".join(s.text for s in window),
-                    header=header,
-                    section=section,
-                    page=window[0].page,
-                    tokens=sum(s.tokens for s in window),
+        groups = _glossary_items(sentences) if _GLOSSARY.search(section) else [sentences]
+        for group in groups:
+            for window in _windows(group, max_tokens, overlap_tokens):
+                chunks.append(
+                    Chunk(
+                        index=len(chunks),
+                        text=" ".join(s.text for s in window),
+                        header=header,
+                        section=section,
+                        page=window[0].page,
+                        tokens=sum(s.tokens for s in window),
+                    )
                 )
-            )
     return chunks
+
+
+def _glossary_items(sentences: list[_Sentence]) -> list[list[_Sentence]]:
+    """Словарь «17) термин – ...; 18) термин – ...» → одно определение на чанк.
+
+    Иначе в чанк попадает десяток несвязанных терминов, его вектор становится
+    «средним по всему», и такой чанк всплывает в топе почти на любой запрос.
+    """
+    items: list[list[_Sentence]] = []
+    for sentence in sentences:
+        if not items or _ITEM_START.match(sentence.text):
+            items.append([sentence])
+        else:
+            items[-1].append(sentence)      # продолжение определения: «...обезличивание. Агрегированные...»
+    return items
 
 
 def _sentences(blocks: Iterable[Block], max_tokens: int, count: TokenCounter) -> Iterator[_Sentence]:

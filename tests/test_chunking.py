@@ -52,3 +52,25 @@ def test_page_of_first_sentence() -> None:
 def test_overlap_must_be_smaller_than_chunk() -> None:
     with pytest.raises(ValueError):
         chunk_blocks([Block("текст")], "", max_tokens=50, overlap_tokens=50)
+
+
+def test_glossary_one_definition_per_chunk() -> None:
+    text = (
+        "В настоящем Законе используются следующие основные понятия: "
+        "17) пользователь услугами связи - лицо, получающее услуги связи; "
+        "18) оператор связи – лицо, оказывающее услуги связи; "
+        "22-2) агрегирование данных – обработка информации в обобщенном виде. "
+        "Агрегированные данные используются для отчетности; "
+        "23) стандартная точка присоединения - средства телекоммуникаций."
+    )
+    section = "Статья 2. Основные понятия, используемые в настоящем Законе"
+    chunks = chunk_blocks([Block(text, section)], "Закон о связи", max_tokens=350, overlap_tokens=50)
+    assert [c.text.split(" ", 1)[0] for c in chunks] == ["В", "17)", "18)", "22-2)", "23)"]
+    assert chunks[3].text.endswith("используются для отчетности;")   # продолжение определения — в том же чанке
+    assert chunks[2].embed_text.startswith("Закон о связи > Статья 2. Основные понятия")
+
+
+def test_numbered_list_outside_glossary_stays_together() -> None:
+    text = "В уведомлении указываются: 1) наименование оператора; 2) БИН оператора; 3) территория."
+    chunks = chunk_blocks([Block(text, "Статья 16-1. Уведомление")], "", max_tokens=350)
+    assert len(chunks) == 1
