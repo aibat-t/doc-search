@@ -7,6 +7,7 @@
 """
 
 import argparse
+import re
 import time
 
 import numpy as np
@@ -61,7 +62,9 @@ def recall(approx: list[list[int]], exact: list[list[int]], k: int) -> float:
 def explain(conn: psycopg.Connection, query: np.ndarray, k: int) -> str:
     literal = "[" + ",".join(f"{x:.6f}" for x in query) + "]"
     sql = f"EXPLAIN SELECT id FROM bench_vectors ORDER BY embedding <=> '{literal}'::vector LIMIT {int(k)}"
-    return "\n".join(row[0] for row in conn.execute(sql).fetchall())
+    lines = [row[0] for row in conn.execute(sql).fetchall()]
+    # Вектор из 768 чисел в плане не нужен — оставляем только структуру.
+    return "\n".join(re.sub(r"'\[[^\]]*\]'", "'[...]'", line) for line in lines)
 
 
 def main() -> None:
