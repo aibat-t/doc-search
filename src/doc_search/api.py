@@ -4,6 +4,7 @@
 """
 
 import hashlib
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -18,6 +19,8 @@ from doc_search.db import init_schema, make_pool
 from doc_search.embedder import Embedder
 from doc_search.models import ChunkHit, DocumentOut, SearchResponse, UploadResult
 from doc_search.parsing import SUPPORTED_SUFFIXES
+from doc_search.reranker import Reranker
+from doc_search.search import RerankerDisabled, Searcher, SearchMode
 
 router = APIRouter()
 
@@ -86,13 +89,17 @@ def search(
     request: Request,
     q: Annotated[str, Query(min_length=1, max_length=1000, description="Вопрос пользователя")],
     k: Annotated[int, Query(ge=1, le=20)] = 5,
+    mode: Annotated[SearchMode, Query(description="vector | keyword | hybrid | hybrid_rerank")] = SearchMode.HYBRID,
     source: Annotated[str | None, Query(description="Искать только в этом файле")] = None,
 ) -> SearchResponse:
-    state = request.app.state
-    query_vector = state.embedder.encode_queries([q])[0]
-    with state.pool.connection() as conn:
-        rows = repository.search_chunks(conn, query_vector, k, state.settings.hnsw_ef_search, source)
-    return SearchResponse(query=q, hits=[ChunkHit(**row) for row in rows])
+    """Поле score в ответе зависит от режима: косинус, ts_rank_cd, RRF или оценка reranker'а."""
+    start = time.perf_counter()
+    try:
+        rows = request.app.state.searcher.search(q, mode, k, source)
+    except RerankerDisabled as exc:
+        raise HTTPException(400, str(exc)) from exc
+    took_ms = (time.perf_counter() - start) * 1000
+    return SearchResponse(query=q, mode=mode, took_ms=round(took_ms, 1), hits=[ChunkHit(**row) for row in rows])
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -107,6 +114,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.pool = make_pool(settings)
         app.state.producer = messaging.make_producer(settings)
         app.state.embedder = Embedder(settings.embedding_model, settings.query_prefix, settings.passage_prefix)
+        reranker = Reranker(settings.rerank_model, settings.rerank_max_length) if settings.rerank_model else None
+        app.state.searcher = Searcher(app.state.pool, app.state.embedder, settings, reranker)
         yield
         app.state.producer.flush(5)
         app.state.pool.close()

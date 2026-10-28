@@ -1,7 +1,7 @@
 [project]
 name = "doc-search"
 version = "0.1.0"
-description = "Практика 2.2.2–2.2.3: индексация документов через Kafka в pgvector и замеры HNSW"
+description = "Практика 2.2.2–2.2.4: индексация через Kafka в pgvector, замеры HNSW, гибридный поиск и reranking"
 readme = "README.md"
 authors = [
     { name = "Tozhybayev Aibat", email = "a.tozhybayev@alantech.kz" }
@@ -28,9 +28,11 @@ dependencies = [
 # uv run doc-api     — HTTP API на :8000 (Swagger: /docs)
 # uv run doc-worker  — воркер-индексатор, читает Kafka
 # uv run doc-bench   — замеры pgvector: без индекса и с HNSW
+# uv run doc-eval    — сравнение режимов поиска: recall@5, MRR, latency
 doc-api = "doc_search:main"
 doc-worker = "doc_search.worker:main"
 doc-bench = "doc_search.bench:main"
+doc-eval = "doc_search.eval:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]

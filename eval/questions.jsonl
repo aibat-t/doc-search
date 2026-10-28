@@ -1,0 +1,20 @@
+{"id": "card-block", "kind": "semantic", "question": "у меня украли карточку, как её заморозить", "source": "card-rules.md", "section": "Блокировка карты"}
+{"id": "card-pin", "kind": "semantic", "question": "три раза ошибся с паролем от карты в банкомате, что теперь", "source": "card-rules.md", "section": "ПИН-код"}
+{"id": "card-delivery", "kind": "semantic", "question": "сколько стоит привезти новую карту в Караганду", "source": "card-rules.md", "section": "Перевыпуск карты"}
+{"id": "card-dispute", "kind": "semantic", "question": "как долго разбирают спор по покупке за границей", "source": "card-rules.md", "section": "Претензии по операциям"}
+{"id": "card-7711", "kind": "exact", "question": "7711", "source": "card-rules.md", "section": "Блокировка карты"}
+{"id": "tariff-swift", "kind": "exact", "question": "комиссия SWIFT в евро", "source": "tariffs.html", "section": "Международные переводы"}
+{"id": "tariff-phone", "kind": "semantic", "question": "сколько стоит отправить деньги по номеру телефона в чужой банк", "source": "tariffs.html", "section": "Переводы в другие банки"}
+{"id": "tariff-own", "kind": "semantic", "question": "можно ли бесплатно перекинуть деньги себе на другой счёт", "source": "tariffs.html", "section": "Переводы внутри банка"}
+{"id": "law-36-1", "kind": "exact", "question": "статья 36-1", "source": "zakon.pdf", "section": "Статья 36-1."}
+{"id": "law-mnp", "kind": "semantic", "question": "можно ли оставить свой номер телефона, если перехожу к другому мобильному оператору", "source": "zakon.pdf", "section": "Статья 36-1."}
+{"id": "law-imei", "kind": "exact", "question": "регистрация IMEI смартфона, нужен ли ИИН", "source": "zakon.pdf", "section": "Статья 36-2."}
+{"id": "law-tariffs", "kind": "semantic", "question": "кто решает, сколько стоит мобильная связь", "source": "zakon.pdf", "section": "Статья 20."}
+{"id": "law-zone", "kind": "semantic", "question": "можно ли отобрать землю, через которую проходит кабель связи", "source": "zakon.pdf", "section": "Статья 27."}
+{"id": "law-sms-lang", "kind": "semantic", "question": "на каком языке оператор должен присылать СМС", "source": "zakon.pdf", "section": "Статья 37."}
+{"id": "law-time", "kind": "semantic", "question": "по какому часовому поясу сообщают время оказания услуг", "source": "zakon.pdf", "section": "Статья 38."}
+{"id": "law-shutdown", "kind": "semantic", "question": "кто может отключить интернет при массовых беспорядках", "source": "zakon.pdf", "section": "Статья 41-1."}
+{"id": "law-bailiff", "kind": "exact", "question": "судебные исполнители рассылка SMS", "source": "zakon.pdf", "section": "Статья 15-2."}
+{"id": "law-rural", "kind": "semantic", "question": "покрывает ли государство убытки операторов в деревнях", "source": "zakon.pdf", "section": "Статья 34."}
+{"id": "law-rail", "kind": "semantic", "question": "может ли поезд отказаться везти посылки почты", "source": "zakon.pdf", "section": "Статья 30."}
+{"id": "law-uso", "kind": "exact", "question": "оператор универсального обслуживания", "source": "zakon.pdf", "section": "Статья 33."}

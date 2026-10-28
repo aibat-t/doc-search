@@ -28,3 +28,11 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: int = 50   # ≈ 15% перекрытия
 
     hnsw_ef_search: int = 40
+
+    # Урок 2.2.4: гибридный поиск и reranking.
+    search_candidates: int = 50      # сколько кандидатов берём из каждого поиска перед слиянием/reranking
+    rrf_k: int = 60                  # константа из статьи про RRF, менять почти никогда не нужно
+    # Мультиязычный cross-encoder (~570M параметров, на CPU 50 пар — секунды).
+    # Быстрее, но слабее: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1. Пустая строка — reranker выключен.
+    rerank_model: str = "BAAI/bge-reranker-v2-m3"
+    rerank_max_length: int = 512
