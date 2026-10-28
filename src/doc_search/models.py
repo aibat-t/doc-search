@@ -26,6 +26,7 @@ class UploadResult(BaseModel):
 
 
 class ChunkHit(BaseModel):
+    chunk_id: int
     document_id: UUID
     source: str
     section: str | None
@@ -36,4 +37,6 @@ class ChunkHit(BaseModel):
 
 class SearchResponse(BaseModel):
     query: str
+    mode: str
+    took_ms: float
     hits: list[ChunkHit]

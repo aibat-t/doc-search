@@ -123,7 +123,7 @@ def search_chunks(
 
     rows = conn.execute(
         f"""
-        SELECT c.document_id, d.source, c.section, c.page, c.text,
+        SELECT c.id AS chunk_id, c.document_id, d.source, c.header, c.section, c.page, c.text,
                1 - (c.embedding <=> %(q)s) AS score
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
@@ -135,3 +135,31 @@ def search_chunks(
     ).fetchall()
     # relaxed_order может слегка нарушить порядок — досортируем сами.
     return sorted(rows, key=lambda r: r["score"], reverse=True)
+
+
+def keyword_search(conn: Connection, query: str, k: int, source: str | None = None) -> list[Row]:
+    """Полнотекстовый поиск по колонке tsv (GIN-индекс). Слова запроса соединяем через ИЛИ.
+
+    plainto_tsquery('russian', ...) делает стемминг и выкидывает стоп-слова, но соединяет слова через И:
+    'скольк' & 'сто' & 'перевод' & 'банк'. На естественный вопрос это часто даёт ноль строк —
+    все слова должны встретиться в одном чанке. Меняем & на | и приводим обратно к tsquery
+    (без повторного стемминга). Чанки, где совпало больше слов, всё равно окажутся выше в ранжировании.
+    """
+    where = ""
+    params: dict[str, Any] = {"query": query, "k": k}
+    if source:
+        where = "AND d.source = %(source)s"
+        params["source"] = source
+    return conn.execute(
+        f"""
+        SELECT c.id AS chunk_id, c.document_id, d.source, c.header, c.section, c.page, c.text,
+               ts_rank_cd(c.tsv, q, 1) AS score       -- 1 = поправка на длину чанка
+        FROM chunks c
+        JOIN documents d ON d.id = c.document_id,
+             CAST(replace(plainto_tsquery('russian', %(query)s)::text, ' & ', ' | ') AS tsquery) AS q
+        WHERE c.tsv @@ q {where}
+        ORDER BY score DESC
+        LIMIT %(k)s
+        """,
+        params,
+    ).fetchall()
